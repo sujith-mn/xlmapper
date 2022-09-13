@@ -1,0 +1,146 @@
+package com.xlm;
+
+import com.xlm.util.AnnotationUtil;
+import org.apache.poi.ss.usermodel.*;
+
+import java.beans.IntrospectionException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * @author sujithna
+ * @param <T>
+ *
+ */
+public class SheetReader1<T> {
+
+  private final static Logger LOGGER = Logger.getLogger(SheetReader1.class.getName());
+
+  private Sheet datatypeSheet;
+
+  private Map<String, Method> fieldAnno;
+
+  private DataFormatter df;
+
+  private Class<T> claz;
+
+  private int headerRow = 0;
+
+  private Workbook workbook;
+
+  private Map<Integer, Method> headers = null;
+
+  /**
+   * @param headerRow new value of {@link #getheaderRow}.
+   */
+  public void setHeaderRow(int headerRow) {
+
+    this.headerRow = headerRow;
+  }
+
+  /**
+   * The constructor.
+   *
+   * @param datatypeSheet
+   * @param claz
+   */
+  public SheetReader1(Sheet datatypeSheet, Class<T> claz, Workbook workbook) {
+    super();
+    this.claz = claz;
+    this.datatypeSheet = datatypeSheet;
+    this.df = new DataFormatter();
+    this.workbook = workbook;
+    try {
+      this.fieldAnno = AnnotationUtil.getFields(claz);
+    } catch (IntrospectionException e) {
+      LOGGER.log(Level.SEVERE, "Error while getting the beans annotation..", e);
+    }
+  }
+
+  public List<T> getData() throws InstantiationException, IllegalAccessException, IntrospectionException {
+
+    this.headers = getHeader();
+    List<T> result = new ArrayList<T>();
+
+    for (Row currentRow : this.datatypeSheet) {
+      if (currentRow.getRowNum() <= this.headerRow) {
+        continue; // no need to read header and the rows above.
+      }
+      T instance = getCellValues(currentRow, this.claz);
+      if (instance != null) {
+        result.add(instance);
+      }
+    }
+
+    return result;
+  }
+
+  private T getCellValues(Row row, Class<T> claz)
+      throws InstantiationException, IllegalAccessException, IntrospectionException {
+
+    T instance = null;
+    boolean isBlankRow = true;
+
+    Set<Integer> keyset = this.headers.keySet();
+    for (int i : keyset) {
+      if (instance == null) {
+        instance = claz.newInstance();
+      }
+      Cell c = row.getCell(i);
+      if (setValue(instance, this.headers.get(i), c)) {
+        isBlankRow = false;
+      }
+    }
+    return isBlankRow ? null : instance;
+
+  }
+
+  private boolean setValue(T instance, Method setter, Cell currentCell) throws IntrospectionException {
+
+    try {
+
+      if (currentCell == null) {
+        LOGGER.fine(" No value..." + setter.getName());
+        return false;
+      }
+
+      if (currentCell.getCellTypeEnum() == CellType.FORMULA) {
+        FormulaEvaluator evaluator = this.workbook.getCreationHelper().createFormulaEvaluator();
+        CellValue cellValue = evaluator.evaluate(currentCell);
+        setter.invoke(instance, cellValue.getNumberValue() + "");
+        return true;
+      }
+
+      String value = this.df.formatCellValue(currentCell);
+      if (value.equals("")) {
+        LOGGER.fine(" No value..." + setter.getName());
+        return false;
+      }
+
+      setter.invoke(instance, value);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return true;
+  }
+
+  private Map<Integer, Method> getHeader() {
+
+    Iterator<Cell> cellIterator = this.datatypeSheet.getRow(this.headerRow).iterator();
+    int i = 0;
+    this.headers = new HashMap<Integer, Method>();
+    while (cellIterator.hasNext()) {
+      String value = this.df.formatCellValue(cellIterator.next()).trim();
+      String fieldName = value.replaceAll("[\\t\\n\\r]+", " ");
+      Method setter = this.fieldAnno.get(fieldName);
+      if (setter != null) {
+        this.headers.put(i, setter);
+      }
+      i++;
+    }
+    return this.headers;
+  }
+
+}
