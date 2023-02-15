@@ -17,7 +17,7 @@ public class SheetReaderTest {
     public   static void main(String args[]) throws Exception {
         Workbook workbook = WorkbookFactory.create(new File("C:\\temp\\employee.xlsx"));
         SheetReader<Employee> sr=new SheetReader<Employee>(workbook);
-        sr.setHeaderRow(6);
+        sr.setHeaderRow(0);
         Sheet datatypeSheet =   workbook.getSheetAt(0);
         System.out.println(sr.getListFromSheet(datatypeSheet,Employee.class));
     }

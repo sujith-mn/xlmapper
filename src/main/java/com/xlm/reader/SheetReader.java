@@ -63,7 +63,7 @@ public class SheetReader<T> {
           throws Exception {
     T pojoInstance = claz.getDeclaredConstructor().newInstance();
     for (int position : headerPositionWithSetterMethods.keySet()) {
-      Cell currentCell = row.getCell(position);
+      Cell currentCell = row.getCell(position, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
       if (currentCell!= null) {
         setCellValueToField(pojoInstance, headerPositionWithSetterMethods.get(position), currentCell);
       }
@@ -73,11 +73,42 @@ public class SheetReader<T> {
 
   private void setCellValueToField(T pojoInstance, Method fieldSetterMethod, Cell currentCell)
           throws Exception {
-    if (currentCell.getCellTypeEnum() == CellType.FORMULA) {
-      fieldSetterMethod.invoke(pojoInstance, this.evaluator.evaluate(currentCell).getNumberValue() + "");
+
+/*    if (currentCell.getCellType() == CellType.FORMULA) {
+      value = this.evaluator.evaluate(currentCell).getNumberValue() + "";
+    }else{
+      value = this.df.formatCellValue(currentCell);
+    }*/
+    String cellValueAsString = this.df.formatCellValue(currentCell);
+    String pojoFieldType = fieldSetterMethod.getParameterTypes()[0].getSimpleName().toLowerCase();
+
+    switch (pojoFieldType){
+      case "long":
+        fieldSetterMethod.invoke(pojoInstance,Long.parseLong(cellValueAsString));
+        break;
+      case "integer":
+      case "int":
+        fieldSetterMethod.invoke(pojoInstance,Integer.parseInt(cellValueAsString));
+        break;
+      case "boolean":
+        fieldSetterMethod.invoke(pojoInstance,currentCell.getBooleanCellValue());
+        break;
+      case "date":
+        fieldSetterMethod.invoke(pojoInstance,currentCell.getDateCellValue());
+        break;
+      case "double":
+        fieldSetterMethod.invoke(pojoInstance,currentCell.getNumericCellValue());
+        break;
+      case "string":
+        fieldSetterMethod.invoke(pojoInstance,cellValueAsString);
+        break;
+      default:
+       System.err.println(pojoFieldType+" not supported.");
     }
-    fieldSetterMethod.invoke(pojoInstance, this.df.formatCellValue(currentCell));
+
   }
+
+
 
   private Map<Integer, Method> getHeaderPositionAndSetterMethods(Iterator<Cell> cellIterator,
                                                                  Map<String, Method> fieldSetterMethods) {
