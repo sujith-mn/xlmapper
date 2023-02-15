@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
@@ -37,7 +36,7 @@ public class SheetReader<T> {
     evaluator = workbook.getCreationHelper().createFormulaEvaluator();
   }
 
-  public List<T> getListFromSheet(Sheet datatypeSheet, Class<T> claz) throws Exception {
+  public List<T> retrieveRows(Sheet datatypeSheet, Class<T> claz) throws Exception {
 
     List<T> rows = new ArrayList<T>();
     Map<Integer, Method> headerPositionWithSetterMethods = getHeaderPositionAndSetterMethods(

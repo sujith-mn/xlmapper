@@ -19,7 +19,7 @@ public class SheetReaderTest {
         SheetReader<Employee> sr=new SheetReader<Employee>(workbook);
         sr.setHeaderRow(0);
         Sheet datatypeSheet =   workbook.getSheetAt(0);
-        System.out.println(sr.getListFromSheet(datatypeSheet,Employee.class));
+        System.out.println(sr.retrieveRows(datatypeSheet,Employee.class));
     }
 
     @Test
@@ -30,7 +30,7 @@ public class SheetReaderTest {
         SheetReader<Employee> sr=new SheetReader<Employee>(mockWorkbook);
 
         Sheet datatypeSheet =   mockWorkbook.getSheetAt(0);
-        System.out.println(sr.getListFromSheet(datatypeSheet,Employee.class));
+        System.out.println(sr.retrieveRows(datatypeSheet,Employee.class));
 
     }
 }
